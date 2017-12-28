@@ -12,7 +12,6 @@ import re
 import os
 import sys
 import rpm
-import dnf
 import json
 import shutil
 import fnmatch
@@ -21,6 +20,9 @@ import requests
 
 srcDir = os.path.join(os.getcwd(), 'build')
 outDir = os.path.join(os.getcwd(), 'output')
+
+class fakednf:
+    name = None
 
 def get_commit_list():
     '''Get all of commit.
@@ -76,6 +78,9 @@ def black_item(item):
 
 def query_package(query):
     '''Query package name from remote repository.
+    This function should be replaced with the following yum command on CentOS 7
+    yum provides 'pkgconfig(gbm)' | egrep -v "^Provide|^Matched|^Repo|^$|^Last" | awk '{print $1}'
+    And then parse it into a object list which object.name is the package name
 
     Args:
         query: A string of query.
@@ -84,7 +89,7 @@ def query_package(query):
         Return the list contains the RPM metadata. If the RPM is not found,
         it returns empty list.
     '''
-
+    '''
     if 'repos' not in globals().keys():
         echo('green', 'info:', ' Initial metadata for repository.')
         global repos
@@ -92,6 +97,15 @@ def query_package(query):
         repos.read_all_repos()
         repos.fill_sack(load_available_repos=True)
     return list(repos.provides(query))
+    '''
+    searchcmd = "yum provides '%s' | egrep -v \"^Provide|^Matched|^Repo|^$|^Last\" | awk '{print $1}'" % query
+    output = getoutput(searchcmd).split()
+    resultlist = []
+    for ipkg in output:
+        idnf = fakednf()
+        idnf.name = ipkg
+        resultlist.append(idnf)
+    return resultlist
 
 def parse_spec(specFile, cacheFile='.repocache.json'):
     '''Parse the Spec file contents.
